@@ -1,4 +1,4 @@
-const clothHeight = 45, clothWidth = 50, springLength = 5, maxDistance = 20;
+const clothHeight = 45, clothWidth = 50, springLength = 5, maxDistance = 35;
 class Cloth {
     constructor() {
         this.makePoint = (x, y, xBase, yBase) => {

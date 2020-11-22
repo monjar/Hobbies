@@ -30,6 +30,7 @@ const update = (): void => {
 
 // Initializes the world and JS contex-canvas
 const start = (): void => {
+  initMouse();
   canvas.oncontextmenu = (e) => {
     e.preventDefault();
   };

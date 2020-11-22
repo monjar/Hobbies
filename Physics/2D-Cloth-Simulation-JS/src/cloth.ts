@@ -1,7 +1,7 @@
 const clothHeight: number = 45,
   clothWidth: number = 50,
   springLength: number = 5,
-  maxDistance: number = 20;
+  maxDistance: number = 35;
 
 class Cloth {
   points: Point[];
