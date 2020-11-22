@@ -24,7 +24,7 @@ class Point {
   }
 
   /*Adds the given force to this point.*/
-  add_force = (hForce: number, vForce: number) => {
+  public add_force = (hForce: number, vForce: number): void => {
     this.vx += hForce / this.mass;
     this.vy += vForce / this.mass;
   };

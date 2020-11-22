@@ -45,7 +45,7 @@ const start = (): void => {
 };
 
 // This function adds functionallities to mouse
-const initMouse = () => {
+const initMouse = (): void => {
   canvas.onmousedown = (e) => {
     mouse.button = e.which;
     mouse.prevX = mouse.currentX;
@@ -57,12 +57,12 @@ const initMouse = () => {
     e.preventDefault();
   };
 
-  canvas.onmouseup = (e) => {
+  canvas.onmouseup = (e): void => {
     mouse.down = false;
     e.preventDefault();
   };
 
-  canvas.onmousemove = (e) => {
+  canvas.onmousemove = (e): void => {
     mouse.prevX = mouse.currentX;
     mouse.prevY = mouse.currentY;
     const rect = canvas.getBoundingClientRect();
@@ -72,7 +72,7 @@ const initMouse = () => {
   };
 };
 // This is called on refresh of the html file (Kinda like the main of the program)
-window.onload = function () {
+window.onload = (): void => {
   canvas = document.getElementById("c");
   ctx = canvas.getContext("2d");
 
