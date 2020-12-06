@@ -19,7 +19,7 @@ To run this project you should follow these steps:
    ```
 
 ## Example
-![No Image Yet :)](https://github.com/monjar/Hobbies/Networks/Network-Monitor-Python/example/blob/master/example.jpg?raw=true)
+![No Image Yet :)](https://raw.githubusercontent.com/monjar/Hobbies/master/Networks/Network-Monitor-Python/example/example.png)
 
 ## Sources
 
