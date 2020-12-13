@@ -9,8 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7531d8dd488641140b14598e3a5f96a1, type: 3}
-  m_Name: AvoidanceObject
+  m_Script: {fileID: 11500000, guid: 19228851f2ef52642b51c25342720685, type: 3}
+  m_Name: PhysicsFilterObject
   m_EditorClassIdentifier: 
-  filter: {fileID: 0}
-  smoothTime: 0.1
+  mask:
+    serializedVersion: 2
+    m_Bits: 512

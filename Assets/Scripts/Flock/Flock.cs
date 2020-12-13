@@ -35,14 +35,14 @@ public class Flock : MonoBehaviour
 
     private void CreateAgent(int index)
     {
-        var agentsPosition = flockPopulation * density * Random.insideUnitSphere;
+        var agentsPosition = new Vector3(0, 20, 0 ) +  flockPopulation * density * Random.insideUnitSphere;
         var agent = Instantiate(agentPrefab, agentsPosition, Random.rotation, transform);
         agent.Initialize(this);
         agent.name = $"Agent{index}";
         _flockAgents.Add(agent);
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         _flockAgents.ForEach(agent =>
         {
@@ -55,7 +55,7 @@ public class Flock : MonoBehaviour
         });
     }
 
-    private readonly Collider[] _overlapResults = new Collider[200];
+    private readonly Collider[] _overlapResults = new Collider[500];
 
     private List<Transform> GetNearbyObjects(FlockAgent agent)
     {

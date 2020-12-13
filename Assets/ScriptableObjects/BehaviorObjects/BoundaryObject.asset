@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: BoundaryObject
   m_EditorClassIdentifier: 
   filter: {fileID: 0}
-  center: {x: 0, y: 10, z: 0}
-  radius: 20
+  center: {x: 2.1, y: 0.8, z: 1}
+  radius: 25

@@ -6,6 +6,10 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Flock/Behavior/Avoidance")]
 public class AvoidanceBehavior : FilteredFlockBehavior
 {
+    
+    
+    Vector3 currentVelocity;
+    public float smoothTime= 0.5f;
     public override Vector3 CalculateMove(Flock flock, FlockAgent agent, List<Transform> context)
     {
         var movement = Vector3.zero;
@@ -16,14 +20,19 @@ public class AvoidanceBehavior : FilteredFlockBehavior
        
         filteredContext.ForEach(c =>
         {
-            if (Vector3.SqrMagnitude(c.position - agentPos) < flock.SqAvoidanceRadius)
+            Vector3 closestPoint = c.GetComponent<Collider>().ClosestPointOnBounds(agentPos);
+            var dist = agentPos - closestPoint;
+            if (Vector3.SqrMagnitude(dist) < flock.SqAvoidanceRadius)
             {
+                
                 inAvoidCount++;
-                movement += (agentPos - c.position);
+                movement +=dist;
             }
         });
         if (inAvoidCount > 0)
             movement /= inAvoidCount;
+        
+        movement = Vector3.SmoothDamp(agent.transform.forward, movement, ref currentVelocity, smoothTime);
         return movement;
     }
 }
