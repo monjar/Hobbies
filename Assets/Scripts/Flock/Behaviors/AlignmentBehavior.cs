@@ -16,7 +16,6 @@ public class AlignmentBehavior : FilteredFlockBehavior
             return agent.transform.forward;
         filteredContext.ForEach(c => movement += c.transform.forward);
         movement /= filteredContext.Count;
-        // movement = Vector3.SmoothDamp(agent.transform.forward, movement, ref currentVelocity, smoothTime);
         return movement;
     }
 }
