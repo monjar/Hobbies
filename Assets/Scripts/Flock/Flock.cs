@@ -46,7 +46,6 @@ public class Flock : MonoBehaviour
         _flockAgents.ForEach(agent =>
         {
             var context = GetNearbyObjects(agent);
-            print(context.Count);
             var movement = behavior.CalculateMove(this, agent, context);
             movement *= speedMultiplier;
             if (movement.sqrMagnitude > _sqMaxSpeed)
