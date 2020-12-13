@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 2035111234}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
+  m_IndirectSpecularColor: {r: 131.16855, g: 162.52502, b: 215.10977, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -181,7 +181,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 168218571}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.019999983, y: 1.196, z: 1.8100657}
+  m_LocalPosition: {x: 0.019999983, y: 1.196, z: 1.8101373}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 405591765}
@@ -908,7 +908,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1037846703}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.019999983, y: 1.196, z: -0.687016}
+  m_LocalPosition: {x: 0.019999983, y: 1.196, z: -0.6870339}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 405591765}
@@ -1845,6 +1845,57 @@ LightProbeGroup:
   - {x: -0.68649423, y: 0.51661086, z: 2.327536}
   - {x: -0.8738291, y: 0.51661086, z: 2.5225298}
   m_Dering: 0
+--- !u!1 &1606079172
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1606079174}
+  - component: {fileID: 1606079173}
+  m_Layer: 0
+  m_Name: Flock (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1606079173
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1606079172}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: beb97ac8a65bae049a2d75d04a2ad6f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agentPrefab: {fileID: 9176320006204590576, guid: d95a1de15aaaa0b40ae3b640ebc05a0f, type: 3}
+  behavior: {fileID: 11400000, guid: e9f5f8ba12143e2459417d0613c8f569, type: 2}
+  flockPopulation: 45
+  speedMultiplier: 14.2
+  maxSpeed: 14.7
+  neighborRadius: 4.14
+  avoidanceRadiusMultiplier: 0.334
+  density: 0.1
+--- !u!4 &1606079174
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1606079172}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 9
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1705696664
 GameObject:
   m_ObjectHideFlags: 0
@@ -1905,12 +1956,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   agentPrefab: {fileID: 9176320006204590576, guid: cbd99125e4b61fb4580d55b0d83b3cb8, type: 3}
-  behavior: {fileID: 11400000, guid: bb42ca1c3efa5c84085e3e065b7bceb6, type: 2}
-  flockPopulation: 300
+  behavior: {fileID: 11400000, guid: e9f5f8ba12143e2459417d0613c8f569, type: 2}
+  flockPopulation: 35
   speedMultiplier: 10
   maxSpeed: 5
-  neighborRadius: 1.5
-  avoidanceRadiusMultiplier: 0.5
+  neighborRadius: 4.67
+  avoidanceRadiusMultiplier: 0.187
+  density: 0.0883
 --- !u!4 &1833102026
 Transform:
   m_ObjectHideFlags: 0
@@ -2157,7 +2209,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2059789766}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 2.5100656, y: 1.196, z: 1.1760329}
+  m_LocalPosition: {x: 2.510137, y: 1.196, z: 1.1760687}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 405591765}
@@ -2678,6 +2730,10 @@ PrefabInstance:
     - target: {fileID: 5908769116289372937, guid: cbd99125e4b61fb4580d55b0d83b3cb8, type: 3}
       propertyPath: m_Name
       value: Agent
+      objectReference: {fileID: 0}
+    - target: {fileID: 5908769116289372937, guid: cbd99125e4b61fb4580d55b0d83b3cb8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6916131024235429448, guid: cbd99125e4b61fb4580d55b0d83b3cb8, type: 3}
       propertyPath: m_RootOrder

@@ -13,8 +13,8 @@ public class Flock : MonoBehaviour
     [Range(1f, 100f)] public float maxSpeed = 5f;
     [Range(1f, 10f)] public float neighborRadius = 1.5f;
     [Range(0f, 1f)] public float avoidanceRadiusMultiplier = 0.5f;
+    [Range(0f, 0.1f)] public float density = 0.5f;
 
-    private const float Density = 0.08f;
     private List<FlockAgent> _flockAgents = new List<FlockAgent>();
     private float _sqMaxSpeed;
     private float _sqNeighborRadius;
@@ -35,8 +35,9 @@ public class Flock : MonoBehaviour
 
     private void CreateAgent(int index)
     {
-        var agentsPosition = flockPopulation * Density * Random.insideUnitSphere;
+        var agentsPosition = flockPopulation * density * Random.insideUnitSphere;
         var agent = Instantiate(agentPrefab, agentsPosition, Random.rotation, transform);
+        agent.Initialize(this);
         agent.name = $"Agent{index}";
         _flockAgents.Add(agent);
     }
@@ -59,8 +60,8 @@ public class Flock : MonoBehaviour
     private List<Transform> GetNearbyObjects(FlockAgent agent)
     {
         var context = new List<Transform>();
-        var foundCount = Physics.OverlapBoxNonAlloc(agent.transform.position,
-            new Vector3(neighborRadius, neighborRadius, neighborRadius), _overlapResults);
+        var foundCount = Physics.OverlapSphereNonAlloc(agent.transform.position,
+             neighborRadius, _overlapResults);
         for (var i = 0; i < foundCount; i++)
         {
             if (!_overlapResults[i].Equals(agent.AgentCollider))
