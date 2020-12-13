@@ -25,6 +25,7 @@ public class CompositeBehavior : FilteredFlockBehavior
         for(var i = 0; i < behaviors.Length; i++)
         {
             var moveTemp = behaviors[i].CalculateMove(flock, agent, context) * weights[i];
+
             if (moveTemp != Vector3.zero)
             {
                 if (moveTemp.sqrMagnitude > weights[i] * weights[i])

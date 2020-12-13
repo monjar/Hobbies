@@ -35,7 +35,7 @@ public class Flock : MonoBehaviour
 
     private void CreateAgent(int index)
     {
-        var agentsPosition = new Vector3(0, 20, 0 ) +  flockPopulation * density * Random.insideUnitSphere;
+        var agentsPosition = new Vector3(0, 20, 0 ) +  flockPopulation * density * Random.insideUnitSphere +  Random.insideUnitSphere * 10f;
         var agent = Instantiate(agentPrefab, agentsPosition, Random.rotation, transform);
         agent.Initialize(this);
         agent.name = $"Agent{index}";

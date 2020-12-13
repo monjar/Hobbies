@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: AlignmentObject
   m_EditorClassIdentifier: 
   filter: {fileID: 11400000, guid: e5709c965e7084c40a4d14fcb360bb89, type: 2}
-  smoothTime: 0.01
+  smoothTime: 0

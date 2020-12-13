@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: AvoidanceObstaclesObject
   m_EditorClassIdentifier: 
   filter: {fileID: 11400000, guid: a948922dad1dd4f408043dd110e20c54, type: 2}
-  smoothTime: 0.01
+  smoothTime: 0.05
