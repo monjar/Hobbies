@@ -22,7 +22,6 @@ public class Flock : MonoBehaviour
 
     public float SqAvoidanceRadius => _sqAvoidanceRadius;
 
-    
 
     private void Start()
     {
@@ -40,5 +39,35 @@ public class Flock : MonoBehaviour
         var agent = Instantiate(agentPrefab, agentsPosition, Random.rotation, transform);
         agent.name = $"Agent{index}";
         _flockAgents.Add(agent);
+    }
+
+    private void Update()
+    {
+        _flockAgents.ForEach(agent =>
+        {
+            var context = GetNearbyObjects(agent);
+            print(context.Count);
+            var movement = behavior.CalculateMove(this, agent, context);
+            movement *= speedMultiplier;
+            if (movement.sqrMagnitude > _sqMaxSpeed)
+                movement = movement.normalized * maxSpeed;
+            agent.Move(movement);
+        });
+    }
+
+    private readonly Collider[] _overlapResults = new Collider[200];
+
+    private List<Transform> GetNearbyObjects(FlockAgent agent)
+    {
+        var context = new List<Transform>();
+        var foundCount = Physics.OverlapBoxNonAlloc(agent.transform.position,
+            new Vector3(neighborRadius, neighborRadius, neighborRadius), _overlapResults);
+        for (var i = 0; i < foundCount; i++)
+        {
+            if (!_overlapResults[i].Equals(agent.AgentCollider))
+                context.Add(_overlapResults[i].transform);
+        }
+
+        return context;
     }
 }
