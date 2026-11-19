@@ -1,0 +1,35 @@
+angles:
+  detail-spotting: Point out small visual details a casual viewer would miss in this exact footage.
+  gta-v-comparison: Compare what is visible here with how GTA V handled the same thing, only where the inputs support it.
+  mechanic-explained: Explain the gameplay mechanic that is visible in the footage, step by step.
+  what-you-missed: Walk through the moment as a "what you missed" recap, in order of appearance.
+
+# Visual templates and caption styles are rotated per job so output is not uniform.
+templates: [blur_fill, center_crop, stack_zoom]
+caption_styles:
+  - name: karaoke
+    mode: karaoke
+    font: DejaVu Sans
+    size: 78
+    primary: "FFFFFF"
+    highlight: "FFD400"
+    outline_px: 6
+  - name: pop
+    mode: word
+    font: DejaVu Sans
+    size: 104
+    primary: "FFFFFF"
+    highlight: "36E0FF"
+    outline_px: 8
+
+output:
+  width: 1080
+  height: 1920
+  fps: 30
+  min_s: 20
+  max_s: 40
+  preset: medium
+  crf: 20
+
+speech_wps: 2.6        # words per second used to estimate speech time before TTS
+game_gain_db: -10      # game audio level before sidechain ducking

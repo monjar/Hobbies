@@ -1,0 +1,4 @@
+# Source policy (PLAN.md constraint 1). Enforced in clipforge/ingest/policy.py; deny is the default.
+inbox: inbox                 # local footage folder, relative to the project root
+allowlist_channels: []       # YouTube channel IDs footage may be downloaded from (used from M4)
+allow_creative_commons: true # allow uploads the YouTube API reports as Creative Commons (used from M4)
