@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ source_name }}{% endblock %}
+{% block body %}
+<p><a href="/">← Queue</a></p>
+<div class="row"><h1>{{ sidecar.title if sidecar else source_name }}</h1><span class="tag">{{ job.state }}</span></div>
+{% if error %}<div class="card error">{{ error }}</div>{% endif %}
+{% if job.fail_reason %}<div class="card error">{{ job.fail_reason }}</div>{% endif %}
+{% if sidecar %}{% for flag in sidecar.flags %}<div class="card error">{{ flag }}</div>{% endfor %}{% endif %}
+
+{% if render %}
+<video controls playsinline preload="metadata" src="/media/{{ job.id }}"></video>
+<p class="muted">{{ "%.1f"|format(render.duration_s) }}s · narration {{ "%.0f"|format(render.narration_coverage * 100) }}% ·
+  longest source segment {{ "%.1f"|format(render.max_source_segment_s) }}s · {{ job.template }} · {{ job.caption_style }}</p>
+{% elif job.state not in ('failed', 'rejected') %}
+<div class="card muted">Still working ({{ job.state }}). Reload to check.</div>
+{% endif %}
+
+{% if job.state == 'pending_review' %}
+<div class="card">
+  <form method="post" action="/job/{{ job.id }}/approve">
+    <button class="ok" {{ "" if job.live else "disabled" }}>Approve</button>
+    {% if not job.live %}<p class="muted">Mock renders cannot be approved.</p>{% endif %}
+  </form>
+</div>
+<div class="card">
+  <form method="post" action="/job/{{ job.id }}/reject">
+    <h2>Reject</h2>
+    <textarea name="reason" required placeholder="Reason (required). Later scripts are told to avoid it."></textarea>
+    <button class="bad">Reject</button>
+  </form>
+</div>
+<div class="card">
+  <form method="post" action="/job/{{ job.id }}/regenerate">
+    <h2>Regenerate script</h2>
+    <textarea name="feedback" placeholder="What should change? (optional)"></textarea>
+    <button>Regenerate script</button>
+    <p class="muted">Rejects this render and makes a new one from the same footage.</p>
+  </form>
+</div>
+{% endif %}
+
+{% if script %}
+<div class="card">
+  <h2>Script</h2>
+  <ol class="script">
+    <li><time>0.0s</time><span>{{ script.hook }}</span></li>
+    {% for line in script.lines %}<li><time>{{ "%.1f"|format(line.start) }}s</time><span>{{ line.text }}</span></li>{% endfor %}
+  </ol>
+  <p class="muted">{{ script.description }}<br>{{ script.hashtags|join(" ") }}</p>
+</div>
+{% endif %}
+
+{% if moment %}
+<div class="card">
+  <h2>Spoiler verdict</h2>
+  <p><span class="tag {{ 'ok' if moment.spoiler_label == 'none' else 'bad' }}">{{ moment.spoiler_label }}</span> {{ moment.spoiler_reason }}</p>
+</div>
+<div class="card">
+  <h2>Source</h2>
+  <dl>
+    <dt>File</dt><dd>{{ source_name }}</dd>
+    {% if source %}
+    <dt>Kind</dt><dd>{{ source.kind }}</dd>
+    <dt>Allowed by</dt><dd>{{ source.policy_rule }}</dd>
+    {% if source.url %}<dt>URL</dt><dd>{{ source.url }}</dd>{% endif %}
+    {% if source.channel %}<dt>Channel</dt><dd>{{ source.channel }}</dd>{% endif %}
+    {% if source.licence %}<dt>Licence</dt><dd>{{ source.licence }}</dd>{% endif %}
+    {% endif %}
+    <dt>Window</dt><dd>{{ "%.1f"|format(moment.start_s) }}s – {{ "%.1f"|format(moment.end_s) }}s</dd>
+    <dt>Why</dt><dd>{{ moment.pick_reason }}</dd>
+    <dt>Shows</dt><dd>{{ moment.description }}</dd>
+  </dl>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Cost</h2>
+  <p><strong>${{ "%.4f"|format(total_cost) }}</strong> <span class="muted">of ${{ "%.2f"|format(cap) }} cap</span></p>
+  <dl>{% for cost in costs %}<dt>{{ cost.task }}</dt><dd>${{ "%.4f"|format(cost.usd) }} · {{ cost.model }}</dd>{% endfor %}</dl>
+</div>
+
+{% if reviews %}
+<div class="card">
+  <h2>Review history</h2>
+  <dl>{% for review in reviews %}<dt>{{ review.action }}</dt><dd>{{ review.reason or "" }}</dd>{% endfor %}</dl>
+</div>
+{% endif %}
+{% endblock %}

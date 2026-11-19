@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Review queue{% endblock %} · clipforge</title>
+<style>
+  :root { --bg:#f5f5f2; --card:#fff; --ink:#1b1c1e; --muted:#676b73; --line:#deded8; --ok:#1f7a45; --bad:#b3311f; --accent:#2f4fd0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#131416; --card:#1d1f22; --ink:#ececea; --muted:#9a9ea6; --line:#303338; --ok:#4cc17e; --bad:#f0705c; --accent:#8ea2ff; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.35rem; margin:8px 0 16px; }
+  h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 8px; }
+  a { color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  a.card { display:block; text-decoration:none; color:inherit; }
+  .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .tag { font-size:.75rem; padding:2px 8px; border-radius:99px; border:1px solid var(--line); white-space:nowrap; }
+  .tag.bad { color:var(--bad); border-color:var(--bad); }
+  .tag.ok { color:var(--ok); border-color:var(--ok); }
+  video { width:100%; max-height:70vh; background:#000; border-radius:12px; display:block; }
+  ol.script { margin:0; padding-left:0; list-style:none; }
+  ol.script li { padding:6px 0; border-top:1px solid var(--line); display:flex; gap:10px; }
+  ol.script li:first-child { border-top:0; font-weight:600; }
+  ol.script time { color:var(--muted); font-variant-numeric:tabular-nums; min-width:3.2em; }
+  dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 14px; }
+  dt { color:var(--muted); } dd { margin:0; overflow-wrap:anywhere; }
+  form { margin:0; }
+  textarea { width:100%; min-height:64px; font:inherit; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+  button { width:100%; min-height:48px; font:inherit; font-weight:600; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); margin-top:8px; }
+  button.ok { background:var(--ok); border-color:var(--ok); color:#fff; }
+  button.bad { border-color:var(--bad); color:var(--bad); }
+  button:disabled { opacity:.45; }
+  .error { border-color:var(--bad); color:var(--bad); }
+</style>
+</head>
+<body><main>{% block body %}{% endblock %}</main></body>
+</html>
