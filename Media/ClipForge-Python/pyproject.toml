@@ -17,6 +17,7 @@ dependencies = [
     "scenedetect>=0.7",
     "typer>=0.12",
     "uvicorn>=0.30",
+    "yt-dlp[default]>=2026.10.26",
 ]
 
 [project.scripts]

@@ -15,7 +15,8 @@ from .costs import CostTracker
 from .db import DB
 from .errors import ClipforgeError, ConfigError, SpoilerRejected, ValidationFailed
 from .ingest.local import ingest_local, sha256_file
-from .ingest.policy import check_local
+from .discover.rank import topic_context
+from .ingest.policy import check_library, check_local
 from .log import log
 from .media import probe
 from .providers.base import LLMProvider, VisionProvider
@@ -98,7 +99,7 @@ class Pipeline:
         if caption_style and caption_style not in caption_names:
             raise ConfigError(f"unknown caption style {caption_style!r}; configured: {', '.join(caption_names)}")
 
-        check_local(path, self.settings).require()  # nothing is written for a denied source
+        self._check_source(path)  # nothing is written for a denied source
         source = Path(path).expanduser().resolve()
         sha = sha256_file(source)
 
@@ -116,6 +117,17 @@ class Pipeline:
             job_id = self._create_job(source, sha, angle, live, template, caption_style)
         self.run(job_id)
         return job_id
+
+    def _check_source(self, path: Path | str) -> None:
+        """Allow a file in the inbox, or a library file recorded by a policy-approved URL ingest."""
+        local = check_local(path, self.settings)
+        if local.allowed:
+            return
+        resolved = Path(path).expanduser().resolve()
+        if resolved.is_file() and resolved.is_relative_to(self.settings.library):
+            check_library(resolved, self.settings, self.db, sha256_file(resolved)).require()
+            return
+        local.require()
 
     def _create_job(self, source, sha, angle, live, template=None, caption_style=None, parent=None) -> str:
         style = self.settings.style
@@ -184,7 +196,13 @@ class Pipeline:
 
     # -- stages ------------------------------------------------------------
     def _ingest(self, job) -> None:
-        source_id = ingest_local(self.db, self.settings, Path(job["source_path"]), job["source_sha256"])
+        source = Path(job["source_path"])
+        if source.is_relative_to(self.settings.library):
+            # Already downloaded under the URL policy; re-check that the record still matches.
+            check_library(source, self.settings, self.db, job["source_sha256"]).require()
+            source_id = self.db.one("SELECT id FROM sources WHERE kind = 'url' AND path = ?", str(source))["id"]
+        else:
+            source_id = ingest_local(self.db, self.settings, source, job["source_sha256"])
         self.db.set_job(job["id"], source_id=source_id)
         self.db.transition(job["id"], "ingested")
 
@@ -258,6 +276,7 @@ class Pipeline:
             llm=self.providers.llm,
             costs=self._costs(job_id),
             rejections=rejections,
+            topic_context=topic_context(self.db),
         )
         self._replace(
             "scripts",
@@ -341,13 +360,20 @@ class Pipeline:
         shutil.move(staged, final)
 
         source_row = dict(self.db.one("SELECT * FROM sources WHERE id = ?", job["source_id"]))
+        description, credit = script["description"], None
+        if source_row["kind"] == "url":
+            credit = f"Footage: {source_row['channel']} - {source_row['url']}"
+            if source_row["licence"] == "creativeCommon":
+                credit += " (Creative Commons Attribution)"
+            description = f"{description}\n\n{credit}"
         cost_rows = self.db.all("SELECT provider, task, model, usd FROM costs WHERE job_id = ? ORDER BY id", job_id)
         sidecar = {
             "job_id": job_id,
             "title": script["title"],
-            "description": script["description"],
+            "description": description,
             "hashtags": script["hashtags"],
             "source_attribution": {
+                "credit": credit,
                 "kind": source_row["kind"],
                 "path": source_row["path"],
                 "url": source_row["url"],

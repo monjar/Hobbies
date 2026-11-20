@@ -111,6 +111,31 @@ MIGRATIONS = [
         created_at REAL NOT NULL
     );
     """,
+    """
+    CREATE TABLE topics (
+        video_id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        channel_id TEXT NOT NULL,
+        channel_title TEXT NOT NULL,
+        published_at TEXT NOT NULL,
+        duration_s INTEGER NOT NULL,
+        views INTEGER NOT NULL,
+        likes INTEGER NOT NULL,
+        licence TEXT NOT NULL,
+        keyword TEXT NOT NULL,
+        fetched_at TEXT NOT NULL,
+        views_per_hour REAL NOT NULL
+    );
+    CREATE TABLE quota_log (
+        id INTEGER PRIMARY KEY,
+        run_id TEXT NOT NULL,
+        api TEXT NOT NULL,
+        method TEXT NOT NULL,
+        bucket TEXT NOT NULL,
+        units INTEGER NOT NULL,
+        created_at REAL NOT NULL
+    );
+    """,
 ]
 
 

@@ -39,7 +39,7 @@ def _report(pipeline: Pipeline, job_id: str) -> None:
 
 @app.command()
 def make(
-    path: Annotated[Path, typer.Argument(help="Footage file inside the inbox folder.")],
+    path: Annotated[Path, typer.Argument(help="Footage file in the inbox, or one downloaded by `clipforge ingest`.")],
     angle: Annotated[str, typer.Option("--angle", help="Narration angle from config/style.yaml.")],
     live: LiveOpt = False,
     template: Annotated[Optional[str], typer.Option(help="Visual template; rotated when omitted.")] = None,
@@ -58,6 +58,62 @@ def make(
             )
         job_id = pipeline.make(path, angle, live, template, caption_style, new)
         _report(pipeline, job_id)
+    except ClipforgeError as exc:
+        _fail(exc)
+
+
+def _youtube(settings, on_call=None):
+    from .discover.youtube import YouTubeClient
+
+    return YouTubeClient(settings.secret("YOUTUBE_API_KEY"), on_call=on_call)
+
+
+@app.command()
+def discover():
+    """Search YouTube for the configured keywords and store the results as topics. Metadata only."""
+    from .discover.rank import discover as run_discover
+
+    try:
+        settings = load_settings()
+        result = run_discover(DB(settings.db_path), settings, lambda on_call: _youtube(settings, on_call))
+        quota = ", ".join(f"{bucket}: {units}" for bucket, units in result["quota"].items()) or "none"
+        typer.echo(f"stored {result['topics']} topics; YouTube quota used this run - {quota}")
+    except ClipforgeError as exc:
+        _fail(exc)
+
+
+@app.command()
+def topics(limit: Annotated[int, typer.Option(help="How many topics to print.")] = 20):
+    """Print stored topics, fastest-growing first, with a suggested narration angle. No network."""
+    from .discover.rank import ranked_topics, suggest_angle
+
+    try:
+        settings = load_settings()
+        rows = ranked_topics(DB(settings.db_path), limit)
+        if not rows:
+            typer.echo("no topics stored; run `clipforge discover` first")
+        for rank, topic in enumerate(rows, 1):
+            licence = "CC" if topic["licence"] == "creativeCommon" else "std"
+            angle = suggest_angle(topic["title"], list(settings.style.angles))
+            typer.echo(
+                f"{rank:>2}. {topic['views_per_hour']:>9.0f} views/h  [{licence}]  {angle:<19} "
+                f"{topic['title']}  https://www.youtube.com/watch?v={topic['video_id']}"
+            )
+    except ClipforgeError as exc:
+        _fail(exc)
+
+
+@app.command()
+def ingest(url: Annotated[str, typer.Argument(help="A YouTube video URL.")]):
+    """Download one video into the library, if the source policy allows it."""
+    from .ingest.url import YtDlpDownloader, ingest_url
+
+    try:
+        settings = load_settings()
+        db = DB(settings.db_path)
+        source_id = ingest_url(db, settings, url, _youtube(settings).video, YtDlpDownloader())
+        row = db.one("SELECT * FROM sources WHERE id = ?", source_id)
+        typer.echo(f"allowed by: {row['policy_rule']}\nfile:       {row['path']}")
     except ClipforgeError as exc:
         _fail(exc)
 

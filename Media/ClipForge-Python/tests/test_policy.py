@@ -1,7 +1,7 @@
 import pytest
 
 from clipforge.errors import PolicyDenied
-from clipforge.ingest.policy import RULE_LOCAL_INBOX, check_local, check_url
+from clipforge.ingest.policy import RULE_LOCAL_INBOX, check_local
 
 
 def test_file_in_inbox_is_allowed(settings, inbox_clip):
@@ -27,9 +27,6 @@ def test_path_traversal_is_denied(settings, fixture_clip, root):
     outside.write_bytes(b"x")
     assert not check_local(settings.inbox / ".." / "elsewhere.mp4", settings).allowed
 
-
-def test_urls_are_denied_by_default(settings):
-    assert not check_url("https://www.youtube.com/watch?v=abc", settings).allowed
 
 
 def test_denied_source_writes_nothing(settings, db, make_pipeline, fixture_clip):

@@ -8,12 +8,14 @@ A local pipeline that turns gaming footage into narrated vertical short videos (
 | --- | --- |
 | M0 — one video from a local file | Built. Tested end to end with mocked providers and real ffmpeg. Not yet run with live providers. |
 | M1 — review queue | Built and tested. |
-| M2 — analysis quality (ranking, labelled spoiler set, dedup, subject-aware crop) | Not started. Needs 10 hand-labelled clips. |
-| M3–M7 — discovery, URL ingest, publishing, metrics, scheduler | Not started. |
+| M3 — discovery | YouTube part built and tested against stubs. Reddit not started. |
+| M4 — gated URL ingest | Built and tested against stubs. No real download has completed yet. |
+| M2 — analysis quality (ranking, labelled spoiler set, dedup, subject-aware crop) | Not started. Needs 10 downloaded clips to label. |
+| M5–M7 — publishing, metrics, scheduler | Not started. |
 
 ## Setup
 
-Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and `ffmpeg` / `ffprobe` on `PATH` built with libx264 and libass.
+Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and `ffmpeg` / `ffprobe` on `PATH` built with libx264 and libass. `clipforge ingest` also needs a JavaScript runtime (deno or node) on `PATH`, which yt-dlp uses for YouTube.
 
 ```bash
 uv sync
@@ -31,7 +33,8 @@ Run commands from this folder, or set `CLIPFORGE_HOME` to it.
 | `TTS_API_KEY` | ElevenLabs key: narration | `--live` |
 | `MAX_COST_PER_VIDEO_USD` | Spend cap per video, default `0.50`. The job aborts when it is exceeded. | always |
 | `CLIPFORGE_HOME` | Project root, if not the current folder | optional |
-| `YOUTUBE_*`, `REDDIT_*`, `TIKTOK_*`, `INSTAGRAM_ACCESS_TOKEN` | Discovery and publishing | M3 onwards |
+| `YOUTUBE_API_KEY` | YouTube Data API key: discovery and the licence check before any download | `discover`, `ingest` |
+| `YOUTUBE_OAUTH_*`, `REDDIT_*`, `TIKTOK_*`, `INSTAGRAM_ACCESS_TOKEN` | Reddit discovery and publishing | later milestones |
 
 ## Make a video
 
@@ -48,11 +51,29 @@ The video and its sidecar JSON (title, description, hashtags, source attribution
 
 What happens in order: source policy check → transcribe (faster-whisper) → shot detection (PySceneDetect) → candidate 20–40 s windows scored by shot-change and speech rate → vision description of sampled frames → LLM picks a window → spoiler check → script → validation → TTS → 9:16 reframe → word-level captions → audio mix → encode → output validation.
 
+## Find topics and download allowed footage
+
+```bash
+uv run clipforge discover     # search YouTube for the keywords in config/sources.yaml; stores metadata only
+uv run clipforge topics       # print stored topics, fastest-growing first, with a suggested angle
+uv run clipforge ingest "https://www.youtube.com/watch?v=VIDEO_ID"
+uv run clipforge make library/VIDEO_ID.mp4 --angle detail-spotting
+```
+
+`discover` never downloads. `ingest` asks the YouTube Data API about the video first and downloads only if its channel is in `allowlist_channels` or the API reports a Creative Commons licence. The download goes to `library/`, and the source row records the URL, channel, licence, the rule that allowed it and the time. Videos made from it carry a credit line in the sidecar and the description. The five highest-ranked topic titles are given to the script prompt as background.
+
+To get a key: create a project in the Google Cloud console, enable "YouTube Data API v3", and create an API key. Each keyword uses one of the 100 daily search calls per `discover` run.
+
+Run `ingest` from a home connection. From cloud servers YouTube refuses with a "confirm you're not a bot" check.
+
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `clipforge make PATH --angle ANGLE [--live] [--template T] [--caption-style S] [--new]` | Make one video from a file in `inbox/`. Re-running resumes or reuses the existing job for that file and angle; `--new` starts another. |
+| `clipforge discover` | Search YouTube for the configured keywords, store topics, print quota used. |
+| `clipforge topics [--limit N]` | Print ranked topics from stored data. No network. |
+| `clipforge ingest URL` | Download one YouTube video into `library/` if the source policy allows it. |
+| `clipforge make PATH --angle ANGLE [--live] [--template T] [--caption-style S] [--new]` | Make one video from a file in `inbox/` or one downloaded by `ingest`. Re-running resumes or reuses the existing job for that file and angle; `--new` starts another. |
 | `clipforge jobs [--limit N]` | List recent jobs with state and failure reason. |
 | `clipforge show JOB_ID` | Print a job's script and sidecar as JSON. |
 | `clipforge review [--lan] [--port 8000]` | Serve the review queue. `--lan` listens on all interfaces so a phone can open `http://<your-computer-ip>:8000`. There is no login, so use it only on a network you trust. |
@@ -62,7 +83,7 @@ What happens in order: source policy check → transcribe (faster-whisper) → s
 
 ## Rules enforced in code
 
-- **Source policy.** `clipforge/ingest/policy.py` denies by default. Today the only allow rule is a real file inside `inbox/`; a symlink pointing outside is refused. URLs are always refused until M4.
+- **Source policy.** `clipforge/ingest/policy.py` denies by default. Allowed: a real file inside `inbox/` (a symlink pointing outside is refused); a YouTube video from an allowlisted channel; a YouTube video the API reports as Creative Commons. A file in `library/` is usable only if it has an ingest record and its hash still matches.
 - **No auto-publish.** Every render stops at `pending_review`. Only `approve` (CLI or queue) moves it on, and there is no flag that skips this.
 - **Narration.** A render fails if narration covers less than 60% of it or if any uninterrupted stretch of source footage is longer than 15 s. The limits are constants in `clipforge/rules.py`, not config.
 - **Spoiler gate.** A clip classified as an ending, an isolated cutscene or a major story reveal fails before any script is written.
@@ -83,13 +104,13 @@ discovered -> ingested -> analysed -> scripted -> voiced -> rendered
 any non-terminal state -> failed (with reason)
 ```
 
-`clipforge/db.py` is the only place a state changes, and illegal moves raise. State lives in `state/clipforge.db`. Tables so far: `jobs`, `sources`, `moments`, `scripts`, `renders`, `costs`, `reviews`. The `topics`, `posts` and `metrics` tables arrive with their milestones as new migrations.
+`clipforge/db.py` is the only place a state changes, and illegal moves raise. State lives in `state/clipforge.db`. Tables so far: `jobs`, `sources`, `moments`, `scripts`, `renders`, `costs`, `reviews`, `topics`, `quota_log`. The `posts` and `metrics` tables arrive with their milestones as new migrations.
 
 ## Configuration
 
 | File | Contents |
 | --- | --- |
-| `config/sources.yaml` | Inbox path, channel allowlist, Creative Commons rule |
+| `config/sources.yaml` | Inbox and library paths, channel allowlist, Creative Commons rule, discovery keywords |
 | `config/providers.yaml` | Provider, model and price per role; transcription settings |
 | `config/style.yaml` | Narration angles, visual templates, caption styles, output size and length |
 

@@ -16,10 +16,18 @@ class _Cfg(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class DiscoveryCfg(_Cfg):
+    keywords: list[str] = []
+    max_results: int = Field(default=25, ge=1, le=50)
+    lookback_days: int = Field(default=7, ge=1)
+
+
 class SourcesCfg(_Cfg):
     inbox: str = "inbox"
+    library: str = "library"
     allowlist_channels: list[str] = []
     allow_creative_commons: bool = True
+    discovery: DiscoveryCfg = DiscoveryCfg()
 
 
 class ModelCfg(_Cfg):
@@ -108,6 +116,10 @@ class Settings:
     @property
     def inbox(self) -> Path:
         return (self.root / self.sources.inbox).resolve()
+
+    @property
+    def library(self) -> Path:
+        return (self.root / self.sources.library).resolve()
 
     @property
     def work(self) -> Path:

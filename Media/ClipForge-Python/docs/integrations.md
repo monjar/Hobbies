@@ -44,6 +44,35 @@ Notes:
 - PCM and WAV output at 44.1 kHz need the Pro tier, and 192 kbps MP3 needs Creator. The default MP3 format has no tier requirement.
 - No live call has been made from this repo yet.
 
+## YouTube Data API v3 — discovery and the source policy lookup
+
+Checked: 2026-11-20. Code: `clipforge/discover/youtube.py`.
+
+| What | Value | Source |
+| --- | --- | --- |
+| Auth | API key in the `key` query parameter (read-only calls need no OAuth) | https://developers.google.com/youtube/v3/docs |
+| Search | `GET https://www.googleapis.com/youtube/v3/search` with `part=snippet`, `type=video`, `q`, `order`, `publishedAfter`, `maxResults` (max 50), `videoLicense` (`any`, `creativeCommon`, `youtube`; needs `type=video`) | https://developers.google.com/youtube/v3/docs/search/list |
+| Videos | `GET https://www.googleapis.com/youtube/v3/videos` with `part=snippet,contentDetails,statistics,status` and comma-separated `id`; `maxResults` is not supported together with `id` | https://developers.google.com/youtube/v3/docs/videos/list |
+| Licence field | `status.license` is `creativeCommon` or `youtube` | https://developers.google.com/youtube/v3/docs/videos |
+| Quota | `search.list` has its own bucket: 100 calls a day, 1 per call, each extra page counts. `videos.list` costs 1 unit from the 10,000-unit daily pool. Invalid requests also cost at least 1. Resets at midnight Pacific. | https://developers.google.com/youtube/data/determine_quota_cost |
+
+Notes:
+
+- The search quota changed from the long-standing "100 units per call out of 10,000". It is now a separate 100-calls-a-day bucket. Each configured keyword uses one search call per `clipforge discover` run.
+- The limit of 50 IDs per `videos.list` call is not stated on the reference page; the client batches at 50, the usual value. Not confirmed against a live call.
+- The key travels in the URL, so request URLs are never logged or put in error messages.
+- Live status: requests from this repo reach the API and its error responses are handled (checked with an invalid key on 2026-11-20). No call with a valid key has been made yet.
+
+## yt-dlp — downloads for policy-approved URLs
+
+Checked: 2026-11-20, version 2026.10.26. Code: `clipforge/ingest/url.py`.
+
+- Python API: `yt_dlp.YoutubeDL(options).download([url])` with `format`, `merge_output_format`, `outtmpl`, `noplaylist`, `js_runtimes`.
+- YouTube extraction needs a JavaScript runtime on `PATH`. yt-dlp enables only deno by default; this project also enables node.
+- yt-dlp is not an official YouTube API, and the Data API has no download endpoint. Downloads are limited by `ingest/policy.py` to allowlisted channels and uploads the API reports as Creative Commons. Whether that use fits YouTube's Terms of Service for your case is your call to make.
+- From a cloud or datacentre IP, YouTube answers with "Sign in to confirm you're not a bot" (seen 2026-11-20). Run `clipforge ingest` from a home connection. This project does not pass account cookies to get around that check.
+- Live status: no download has completed from this repo yet.
+
 ## Local libraries (no network API)
 
 | Library | Version checked | Use |
@@ -54,4 +83,4 @@ Notes:
 
 ## Not yet integrated
 
-YouTube Data API, Reddit API, TikTok and Instagram publishing belong to M3–M5. Each needs its own entry here (scopes, audit status, private-only restrictions for unaudited apps, rate limits, synthetic-content disclosure fields) before any code is written.
+Reddit API, YouTube uploads, TikTok and Instagram publishing belong to M3–M5. Each needs its own entry here (scopes, audit status, private-only restrictions for unaudited apps, rate limits, synthetic-content disclosure fields) before any code is written.
