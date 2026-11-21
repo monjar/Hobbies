@@ -169,6 +169,162 @@ def eval_spoilers(
     raise typer.Exit(1 if leaks else 0)
 
 
+def _google_auth(settings):
+    from .publish.google_auth import GoogleAuth
+
+    return GoogleAuth(
+        settings.secret("YOUTUBE_OAUTH_CLIENT_ID"), settings.secret("YOUTUBE_OAUTH_CLIENT_SECRET"),
+        settings.root / "state" / "google_token.json",
+    )
+
+
+def _publisher(settings, platform: str):
+    from .publish.export import ExportPublisher
+    from .publish.instagram import InstagramPublisher
+    from .publish.youtube import YouTubePublisher
+
+    cfg = getattr(settings.publish, platform)
+    if cfg.mode == "export":
+        return ExportPublisher(platform, settings.out, getattr(cfg, "ai_disclosure", False))
+    if platform == "youtube":
+        # The token is fetched only when a request is really sent, so --dry-run needs no login.
+        return YouTubePublisher(cfg, lambda: _google_auth(settings).access_token())
+    return InstagramPublisher(cfg, settings.secret("INSTAGRAM_ACCESS_TOKEN"), settings.secret("INSTAGRAM_USER_ID"))
+
+
+@app.command()
+def auth(service: Annotated[str, typer.Argument(help="Only 'youtube' is supported.")]):
+    """Connect a YouTube channel for uploads and analytics. Opens a Google consent page."""
+    import webbrowser
+
+    if service != "youtube":
+        typer.secho("error: only `clipforge auth youtube` is supported", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    def show(url: str) -> None:
+        typer.echo(f"Open this page and approve access:\n\n{url}\n")
+        webbrowser.open(url)
+
+    try:
+        _google_auth(load_settings()).login(show)
+        typer.echo("YouTube connected.")
+    except ClipforgeError as exc:
+        _fail(exc)
+
+
+@app.command()
+def publish(
+    job_id: str,
+    platform: Annotated[str, typer.Option("--platform", help="youtube, tiktok or instagram.")],
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Print the exact requests without sending anything.")] = False,
+):
+    """Publish an approved render to one platform, or export it for manual upload."""
+    from .publish.base import PLATFORMS, publish_job
+
+    try:
+        if platform not in PLATFORMS:
+            raise ClipforgeError(f"unknown platform {platform!r}; choose from {', '.join(PLATFORMS)}")
+        settings = load_settings()
+        result = publish_job(DB(settings.db_path), job_id, _publisher(settings, platform), dry_run)
+    except ClipforgeError as exc:
+        _fail(exc)
+    if dry_run:
+        typer.echo(json.dumps(result, indent=2))
+    elif result.status == "exported":
+        typer.echo(f"exported for manual upload:\n  {result.detail.get('video')}\n  {result.detail.get('caption')}")
+    else:
+        typer.echo(f"published to {platform}: {result.url or result.post_id}")
+
+
+@app.command("metrics-pull")
+def metrics_pull():
+    """Store today's numbers for every post published to YouTube through the API."""
+    from datetime import date
+
+    from .metrics.pull import pull_youtube
+
+    try:
+        settings = load_settings()
+        stored = pull_youtube(DB(settings.db_path), lambda: _google_auth(settings).access_token(), date.today())
+        typer.echo(f"stored metrics for {stored} YouTube posts")
+    except ClipforgeError as exc:
+        _fail(exc)
+
+
+@app.command("metrics-add")
+def metrics_add(
+    job_id: str,
+    platform: Annotated[str, typer.Option("--platform")],
+    views: Annotated[int, typer.Option("--views")],
+    likes: Annotated[int, typer.Option("--likes")] = 0,
+    shares: Annotated[int, typer.Option("--shares")] = 0,
+    avg_view_s: Annotated[Optional[float], typer.Option("--avg-view-s", help="Average view duration in seconds.")] = None,
+):
+    """Enter numbers by hand for a post uploaded manually (TikTok, Instagram)."""
+    from datetime import date
+
+    from .metrics.pull import add_manual
+
+    try:
+        add_manual(DB(load_settings().db_path), job_id, platform, date.today(), views, likes, shares, avg_view_s)
+        typer.echo("stored")
+    except ClipforgeError as exc:
+        _fail(exc)
+
+
+@app.command()
+def report(days: Annotated[int, typer.Option(help="How many days back to cover.")] = 7):
+    """Print a markdown performance report from stored metrics and save it under out/reports/."""
+    from datetime import date
+
+    from .metrics.report import build_report
+
+    try:
+        settings = load_settings()
+        text = build_report(DB(settings.db_path), date.today(), days)
+    except ClipforgeError as exc:
+        _fail(exc)
+    dest = settings.out / "reports" / f"{date.today().isoformat()}.md"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(text)
+    typer.echo(text)
+
+
+@app.command()
+def run(
+    jobs: Annotated[int, typer.Option("--jobs", help="How many videos to make at most.")] = 3,
+    live: LiveOpt = False,
+):
+    """Unattended batch: discover, ingest allowed footage, make videos. Stops at the review queue."""
+    from .discover.rank import discover as run_discover
+    from .ingest.url import YtDlpDownloader, ingest_url
+    from .notify import send_webhook
+    from .scheduler import run_batch
+
+    try:
+        settings = load_settings()
+        db = DB(settings.db_path)
+        pipeline = Pipeline(settings, db, build_providers(settings, live))
+        has_key = bool(settings.env.get("YOUTUBE_API_KEY"))
+        webhook = settings.env.get("NOTIFY_WEBHOOK_URL")
+
+        def ingest(url: str) -> Path:
+            source_id = ingest_url(db, settings, url, _youtube(settings).video, YtDlpDownloader())
+            return Path(db.one("SELECT path FROM sources WHERE id = ?", source_id)["path"])
+
+        summary = run_batch(
+            db, settings, pipeline, jobs, live,
+            discover=(lambda: run_discover(db, settings, lambda on_call: _youtube(settings, on_call))) if has_key else None,
+            ingest=ingest if has_key else None,
+            notify=(lambda text: send_webhook(webhook, text)) if webhook else None,
+        )
+    except ClipforgeError as exc:
+        _fail(exc)
+    typer.echo(f"made {len(summary['made'])}, failed {len(summary['failed'])}, waiting for review {summary['pending_review']}")
+    for item in summary["failed"]:
+        typer.echo(f"  failed: {item['target']} - {item['reason']}")
+
+
 @app.command()
 def jobs(limit: Annotated[int, typer.Option(help="How many recent jobs to list.")] = 20):
     """List recent jobs and their states."""

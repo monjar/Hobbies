@@ -20,6 +20,7 @@ from .discover.rank import topic_context
 from .ingest.policy import check_library, check_local
 from .log import log
 from .media import probe
+from .metrics.report import top_scripts
 from .providers.base import LLMProvider, VisionProvider
 from .render.captions import render_ass
 from .render.cut import plan_segments
@@ -298,6 +299,7 @@ class Pipeline:
             costs=self._costs(job_id),
             rejections=rejections,
             topic_context=topic_context(self.db),
+            winners=top_scripts(self.db),
         )
         self._replace(
             "scripts",

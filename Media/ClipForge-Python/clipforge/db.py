@@ -144,6 +144,35 @@ MIGRATIONS = [
     );
     CREATE INDEX keyframe_hashes_job ON keyframe_hashes(job_id);
     """,
+    """
+    CREATE TABLE posts (
+        id INTEGER PRIMARY KEY,
+        job_id TEXT NOT NULL REFERENCES jobs(id),
+        platform TEXT NOT NULL,
+        status TEXT NOT NULL,
+        post_id TEXT,
+        url TEXT,
+        detail TEXT NOT NULL,
+        created_at REAL NOT NULL,
+        UNIQUE (job_id, platform)
+    );
+    CREATE TABLE metrics (
+        id INTEGER PRIMARY KEY,
+        post_id INTEGER NOT NULL REFERENCES posts(id),
+        pulled_on TEXT NOT NULL,
+        views INTEGER NOT NULL,
+        likes INTEGER NOT NULL,
+        shares INTEGER NOT NULL,
+        avg_view_duration_s REAL,
+        UNIQUE (post_id, pulled_on)
+    );
+    """,
+    """
+    CREATE TABLE ingest_failures (
+        url TEXT PRIMARY KEY,
+        reason TEXT NOT NULL
+    );
+    """,
 ]
 
 

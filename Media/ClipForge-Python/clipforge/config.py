@@ -61,6 +61,30 @@ class ProvidersCfg(_Cfg):
     transcribe: TranscribeCfg = TranscribeCfg()
 
 
+class YouTubePublishCfg(_Cfg):
+    mode: Literal["api", "export"] = "api"
+    privacy: Literal["public", "unlisted", "private"] = "public"
+    category_id: str = "20"
+    contains_synthetic_media: bool = False
+
+
+class TikTokPublishCfg(_Cfg):
+    mode: Literal["export"] = "export"
+    ai_disclosure: bool = True
+
+
+class InstagramPublishCfg(_Cfg):
+    mode: Literal["api", "export"] = "export"
+    ai_disclosure: bool = True
+    api_version: str = "v27.0"
+
+
+class PublishCfg(_Cfg):
+    youtube: YouTubePublishCfg = YouTubePublishCfg()
+    tiktok: TikTokPublishCfg = TikTokPublishCfg()
+    instagram: InstagramPublishCfg = InstagramPublishCfg()
+
+
 class CaptionStyleCfg(_Cfg):
     name: str
     mode: Literal["karaoke", "word"]
@@ -111,6 +135,7 @@ class Settings:
     sources: SourcesCfg
     providers: ProvidersCfg
     style: StyleCfg
+    publish: PublishCfg
     env: dict[str, str]
     max_cost_usd: float
 
@@ -165,6 +190,7 @@ def load_settings(root: Path | str | None = None) -> Settings:
         sources=_load_yaml(root / "config" / "sources.yaml", SourcesCfg),
         providers=_load_yaml(root / "config" / "providers.yaml", ProvidersCfg),
         style=_load_yaml(root / "config" / "style.yaml", StyleCfg),
+        publish=_load_yaml(root / "config" / "publish.yaml", PublishCfg),
         env=env,
         max_cost_usd=max_cost,
     )

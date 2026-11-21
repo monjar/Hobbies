@@ -81,6 +81,96 @@ Checked: 2026-11-20, version 2026.10.26. Code: `clipforge/ingest/url.py`.
 | PySceneDetect | 0.7.3 | `detect(path, ContentDetector())`; timecodes read through `.seconds`. |
 | ffmpeg | 6.1.1 | Filters used: `concat`, `ass`, `loudnorm`, `sidechaincompress`, `amix` with `normalize=0`, `alimiter`. |
 
-## Not yet integrated
+## Google OAuth for installed apps — YouTube uploads and analytics
 
-Reddit API, YouTube uploads, TikTok and Instagram publishing belong to M3–M5. Each needs its own entry here (scopes, audit status, private-only restrictions for unaudited apps, rate limits, synthetic-content disclosure fields) before any code is written.
+Checked: 2026-11-21. Code: `clipforge/publish/google_auth.py`.
+
+| What | Value | Source |
+| --- | --- | --- |
+| Consent page | `https://accounts.google.com/o/oauth2/v2/auth` with `client_id`, `redirect_uri`, `response_type=code`, `scope`, `code_challenge`, `code_challenge_method=S256`, `state` | https://developers.google.com/youtube/v3/guides/auth/installed-apps |
+| Redirect | Loopback: `http://127.0.0.1:<port>` on a random free port (recommended for desktop apps) | same page |
+| Token exchange | `POST https://oauth2.googleapis.com/token` with `code`, `code_verifier`, `grant_type=authorization_code`, `redirect_uri`, `client_id`, `client_secret` | same page |
+| Refresh | Same endpoint with `refresh_token` and `grant_type=refresh_token` | same page |
+
+Notes:
+
+- `access_type=offline` and `prompt=consent` are sent to get a refresh token. These two parameters come from Google's general OAuth documentation, not the excerpt checked here.
+- The refresh token is stored in `state/google_token.json` with mode 600. DPoP, which Google describes as optional, is not used.
+- Scopes requested: `youtube.upload`, `youtube.readonly`, `yt-analytics.readonly`.
+- Live status: the flow has only run against a stub. No real consent has been completed.
+
+## YouTube uploads — `videos.insert`
+
+Checked: 2026-11-21. Code: `clipforge/publish/youtube.py`.
+
+| What | Value | Source |
+| --- | --- | --- |
+| Scope | `https://www.googleapis.com/auth/youtube.upload` | https://developers.google.com/youtube/v3/docs/videos/insert |
+| Start | `POST https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status` with a JSON video resource and `X-Upload-Content-Length`, `X-Upload-Content-Type` headers; the session URL comes back in `Location` | https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol |
+| Transfer | `PUT <session URL>` with the file bytes; success is `201` with the video resource | same page |
+| Audit status | Since 2 November 2026, uploads from unverified API projects are **not** locked to private. Before that they were. | https://developers.google.com/youtube/data/revision_history |
+| Default privacy | `public` when `status.privacyStatus` is omitted; this project always sends it | `videos.insert` page |
+| Daily cap | 100 `videos.insert` calls a day in their own quota bucket | https://developers.google.com/youtube/data/determine_quota_cost |
+| Disclosure | `status.containsSyntheticMedia` discloses *realistic* altered or synthetic content | https://developers.google.com/youtube/v3/docs/videos |
+| Audience | `status.selfDeclaredMadeForKids`, sent as `false` | same page |
+
+Notes:
+
+- `containsSyntheticMedia` defaults to `false` in `config/publish.yaml`. YouTube's examples are a real person made to say something, altered footage of a real event, or a realistic scene that did not happen. A synthetic narrator over game footage does not obviously fit those, but it is your call; set it to `true` if you clone a real person's voice.
+- One older reference page still says unverified projects are locked to private. The revision history and the `videos.insert` page both say the lock is gone.
+- The file is sent in one `PUT`. Renders are a few megabytes, so chunked resume is not implemented.
+- Live status: tested against a stub only. No real upload has been made.
+
+## YouTube Analytics API — metrics
+
+Checked: 2026-11-21. Code: `clipforge/metrics/pull.py`.
+
+| What | Value | Source |
+| --- | --- | --- |
+| Endpoint | `GET https://youtubeanalytics.googleapis.com/v2/reports` | https://developers.google.com/youtube/analytics/reference |
+| Scope | `https://www.googleapis.com/auth/yt-analytics.readonly` | https://developers.google.com/youtube/analytics/reference/reports/query |
+| Parameters | `ids=channel==MINE`, `startDate`, `endDate`, `metrics`, `dimensions=video`, `filters=video==id1,id2` (up to 500 IDs) | same page and https://developers.google.com/youtube/analytics/dimensions |
+| Metrics used | `views`, `likes`, `shares`, `averageViewDuration` | https://developers.google.com/youtube/analytics/metrics |
+
+Notes:
+
+- `sort=-views` and `maxResults=200` are sent because per-video reports have required a sort and a row limit. That requirement and the response shape (`columnHeaders[].name`, `rows`) were not in the pages checked; confirm on the first real pull.
+- Live status: tested against a stub only.
+
+## Instagram content publishing — Reels
+
+Checked: 2026-11-21. Code: `clipforge/publish/instagram.py`. Off by default (`mode: export`).
+
+| What | Value | Source |
+| --- | --- | --- |
+| Create container | `POST https://graph.facebook.com/<version>/<IG_USER_ID>/media` with `media_type=REELS`, `upload_type=resumable`, `caption`; returns `id` and `uri` | https://developers.facebook.com/docs/instagram-platform/content-publishing/resumable-uploads |
+| Upload | `POST https://rupload.facebook.com/ig-api-upload/<version>/<container>` with headers `Authorization: OAuth <token>`, `offset: 0`, `file_size`, and the file bytes | same page |
+| Status | `GET /<container>?fields=status_code` until `FINISHED` (other values: `IN_PROGRESS`, `ERROR`, `EXPIRED`, `PUBLISHED`) | same page |
+| Publish | `POST /<IG_USER_ID>/media_publish` with `creation_id` | same page |
+| Permissions | `instagram_basic`, `instagram_content_publish`, `pages_read_engagement`; a professional account linked to a Facebook Page | https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media |
+| Limits | 100 API-published posts per 24 hours (one page says 50); containers expire after 24 hours | https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/content-publishing |
+| Disclosure | `is_ai_generated=true` on the container | listed on one version of the resumable-uploads page and not the other |
+
+Notes:
+
+- The resumable upload is documented as "only for apps that have implemented Facebook Login for Business". The alternative is `video_url`, which needs the file on a public server.
+- App review is needed for accounts without a role on your app. Publishing to your own account from your own app in development mode normally does not need it; that is from general Meta platform rules, not the pages checked here.
+- `permalink` is requested after publishing for the post URL. If that lookup fails the post is still recorded, without a URL.
+- Live status: tested against a stub only.
+
+## TikTok Content Posting API — not used; export instead
+
+Checked: 2026-11-21. Sources: https://developers.tiktok.com/docs/en/content-sharing-guidelines and https://developers.tiktok.com/docs/en/content-posting-api-reference-direct-post
+
+- Unaudited API clients can post only as `SELF_ONLY`, the posting account must be set to private, and at most 5 users may post per 24 hours.
+- Passing the audit is not realistic for this project. TikTok's guidelines list as not acceptable: "A utility tool to help upload contents to the account(s) you or your team manages", and "An app that copies arbitrary contents from other platforms to TikTok".
+- So `clipforge publish --platform tiktok` writes the MP4 and a caption file to `out/export/<date>/tiktok/` for manual upload, as PLAN.md M5 prescribes when an audit blocks public posting.
+- For reference if this changes: endpoint `/v2/post/publish/video/init/`, scope `video.publish`, 6 requests a minute per user token, about 15 posts a day per creator, and `post_info.is_aigc` for the AI-generated label.
+
+## Reddit Data API — not used
+
+Checked: 2026-11-21. Sources: https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy and https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki
+
+- Self-service API access ended in November 2025. Access now needs explicit approval, and unauthenticated traffic is blocked.
+- A third-party summary of a Reddit announcement (not confirmed on a Reddit page here) says new public API access requests stopped on 31 October 2026 and remaining public access closes in March 2027.
+- Reddit discovery from PLAN.md M3 is therefore not built. If you already hold approved credentials, the calls would be an app-only OAuth token, then `GET https://oauth.reddit.com/r/<subreddit>/hot`, with a descriptive User-Agent and a limit of 100 requests a minute.
