@@ -121,6 +121,54 @@ def ingest(url: Annotated[str, typer.Argument(help="A YouTube video URL.")]):
         _fail(exc)
 
 
+@app.command("eval-highlights")
+def eval_highlights(labels: Annotated[Path, typer.Argument(help="YAML file of clips and hand-labelled highlight spans.")]):
+    """Check highlight ranking against hand labels: does the top window cover a labelled highlight?"""
+    from .analyse.evaluate import HIGHLIGHT_PASS_RATE, evaluate_highlights, load_highlight_labels
+    from .analyse.transcribe import build_transcriber
+    from .pipeline import WINDOW_MARGIN_S
+
+    try:
+        settings = load_settings()
+        out = settings.style.output
+        results = evaluate_highlights(
+            load_highlight_labels(labels), settings.root, build_transcriber(settings.providers.transcribe),
+            out.min_s + WINDOW_MARGIN_S, out.max_s,
+        )
+    except ClipforgeError as exc:
+        _fail(exc)
+    for result in results:
+        mark = "match" if result.matched else "MISS "
+        typer.echo(f"{mark}  {result.top_window.start:7.1f}-{result.top_window.end:7.1f}s  {result.file}")
+    matched = sum(r.matched for r in results)
+    passed = matched >= HIGHLIGHT_PASS_RATE * len(results)
+    typer.echo(f"{matched}/{len(results)} matched; needs {HIGHLIGHT_PASS_RATE:.0%} - {'PASS' if passed else 'FAIL'}")
+    raise typer.Exit(0 if passed else 1)
+
+
+@app.command("eval-spoilers")
+def eval_spoilers(
+    cases: Annotated[Path, typer.Argument(help="YAML file of labelled cases.")] = Path("tests/fixtures/spoilers.yaml"),
+    live: LiveOpt = False,
+):
+    """Run the spoiler classifier over labelled cases. Fails if any spoiler would get through."""
+    from .analyse.evaluate import evaluate_spoilers, load_spoiler_cases
+
+    try:
+        settings = load_settings()
+        if not live:
+            typer.secho("Mock provider labels everything 'none'; pass --live to test the real classifier.", fg=typer.colors.YELLOW, err=True)
+        results, usd = evaluate_spoilers(load_spoiler_cases(cases), build_providers(settings, live).llm)
+    except ClipforgeError as exc:
+        _fail(exc)
+    for result in results:
+        mark = "LEAK " if result.leaked else ("ok   " if result.correct else "wrong")
+        typer.echo(f"{mark}  expected {result.expected:<20} got {result.predicted:<20} {result.name}")
+    leaks = sum(r.leaked for r in results)
+    typer.echo(f"{sum(r.correct for r in results)}/{len(results)} correct, {leaks} spoilers let through, cost ${usd:.4f}")
+    raise typer.Exit(1 if leaks else 0)
+
+
 @app.command()
 def jobs(limit: Annotated[int, typer.Option(help="How many recent jobs to list.")] = 20):
     """List recent jobs and their states."""

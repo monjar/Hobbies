@@ -6,7 +6,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from .analyse import spoiler
+from .analyse import dedup, spoiler
+from .analyse.audio import energy_per_second
 from .analyse.highlights import candidate_windows, pick_window
 from .analyse.scenes import detect_cuts
 from .analyse.transcribe import Transcriber, build_transcriber
@@ -24,6 +25,8 @@ from .render.captions import render_ass
 from .render.cut import plan_segments
 from .render.mix import build_narration
 from .render.reframe import render_video
+from .render.subject import crop_fraction, motion_focus
+from .render.templates import FALLBACK_TEMPLATE, SUBJECT_AWARE
 from .render.validate import check_output, check_plan
 from .script.validate import estimate_speech_s, narration_lines
 from .script.writer import write_script
@@ -176,6 +179,8 @@ class Pipeline:
         moment.pop("id")
         moment["job_id"] = new_id
         self.db.insert("moments", **moment)
+        for row in self.db.all("SELECT hash FROM keyframe_hashes WHERE job_id = ? ORDER BY id", job_id):
+            self.db.insert("keyframe_hashes", job_id=new_id, hash=row["hash"])
         self.db.set_job(new_id, source_id=parent["source_id"])
         self.db.transition(new_id, "ingested")
         self.db.transition(new_id, "analysed")
@@ -215,7 +220,22 @@ class Pipeline:
         (work / "analysis.json").write_text(json.dumps({"cuts": cuts, "words": [w.to_dict() for w in words]}))
         log("analysed_source", job_id, duration_s=info.duration, cuts=len(cuts), words=len(words))
 
-        candidates = candidate_windows(info.duration, cuts, words, out.min_s + WINDOW_MARGIN_S, out.max_s)
+        energy = energy_per_second(source)
+        ranked = candidate_windows(
+            info.duration, cuts, words, out.min_s + WINDOW_MARGIN_S, out.max_s, energy=energy
+        )
+        # Refuse footage that is already in another render; fall through to the next-best window.
+        candidates, hashes = [], {}
+        for candidate in ranked:
+            window = dedup.window_hashes(source, candidate.span)
+            twin = dedup.duplicate_of(self.db, window, exclude_job=job_id)
+            if twin:
+                log("duplicate_window", job_id, level="warning", start_s=candidate.span.start, duplicate_of=twin)
+            else:
+                candidates.append(candidate)
+                hashes[candidate.span] = window
+        if not candidates:
+            raise ValidationFailed(["every candidate window duplicates footage already used in another render"])
         pick = pick_window(
             source=source,
             candidates=candidates,
@@ -230,6 +250,7 @@ class Pipeline:
             description=pick.description, transcript=pick.transcript, llm=self.providers.llm, costs=costs
         )
         segments = plan_segments(pick.candidate.span, cuts)
+        dedup.store_hashes(self.db, job_id, hashes[pick.candidate.span])
         self._replace(
             "moments",
             job_id,
@@ -338,18 +359,28 @@ class Pipeline:
         narration, lufs = build_narration(
             [(Path(line["path"]), start) for line, start in zip(voiced, layout.starts)], layout.tempo, render_s, work
         )
+        source_info = probe(source)
+        template, crop_centres = job["template"], None
+        if template in SUBJECT_AWARE:
+            fraction = crop_fraction(source_info.width, source_info.height, out.width, out.height)
+            crop_centres = [motion_focus(source, segment, fraction) for segment in segments]
+            if any(centre is None for centre in crop_centres):
+                flags.append(f"no clear subject to follow in every segment; used {FALLBACK_TEMPLATE} instead of {template}")
+                log("subject_crop_fallback", job_id, level="warning", template=FALLBACK_TEMPLATE)
+                template, crop_centres = FALLBACK_TEMPLATE, None
         staged = work / "render.mp4"
         render_video(
             source=source,
-            source_has_audio=probe(source).has_audio,
+            source_has_audio=source_info.has_audio,
             segments=segments,
             narration=narration,
             captions_name="captions.ass",
-            template=job["template"],
+            template=template,
             out=out,
             game_gain_db=style.game_gain_db,
             dest=staged,
             work_dir=work,
+            crop_centres=crop_centres,
         )
         check_output(staged, out, render_s)
 
@@ -391,7 +422,7 @@ class Pipeline:
             },
             "spoiler": {"label": moment["spoiler_label"], "reason": moment["spoiler_reason"]},
             "angle": job["angle"],
-            "template": job["template"],
+            "template": template,
             "caption_style": job["caption_style"],
             "duration_s": round(report.render_s, 3),
             "narration_coverage": round(report.narration_coverage, 4),

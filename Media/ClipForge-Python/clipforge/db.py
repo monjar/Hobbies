@@ -136,6 +136,14 @@ MIGRATIONS = [
         created_at REAL NOT NULL
     );
     """,
+    """
+    CREATE TABLE keyframe_hashes (
+        id INTEGER PRIMARY KEY,
+        job_id TEXT NOT NULL REFERENCES jobs(id),
+        hash TEXT NOT NULL
+    );
+    CREATE INDEX keyframe_hashes_job ON keyframe_hashes(job_id);
+    """,
 ]
 
 

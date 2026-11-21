@@ -35,8 +35,19 @@ def stack_zoom(src: str, out: str, w: int, h: int) -> str:
     )
 
 
+def subject_crop(src: str, out: str, w: int, h: int) -> str:
+    """Segments arrive already cropped around the moving subject (see render/subject.py)."""
+    return f"[{src}]null[{out}]"
+
+
+# Templates that need a per-segment crop centre. When no clear subject is found the render
+# falls back to FALLBACK_TEMPLATE and says so in the sidecar.
+SUBJECT_AWARE = frozenset({"subject_crop"})
+FALLBACK_TEMPLATE = "blur_fill"
+
 TEMPLATES: dict[str, Callable[[str, str, int, int], str]] = {
     "blur_fill": blur_fill,
     "center_crop": center_crop,
     "stack_zoom": stack_zoom,
+    "subject_crop": subject_crop,
 }

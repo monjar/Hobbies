@@ -1,0 +1,64 @@
+# Labelled cases for the spoiler classifier (PLAN.md constraint 4 and M2).
+# Written by hand as generic open-world crime game footage; none describes a real game's plot.
+# Run against the real model with: clipforge eval-spoilers --live
+cases:
+  - name: street_driving
+    label: none
+    description: A sports car weaves through evening traffic on a coastal highway. A minimap and speedometer are visible. Palm trees line the road.
+  - name: store_browsing
+    label: none
+    description: The player character walks through a clothing shop, rotating a jacket in a customisation menu with prices listed on the right.
+  - name: police_chase
+    label: none
+    description: Third-person view of the player on a motorbike with a three-star wanted level. Police cars follow and a helicopter spotlight sweeps the road.
+    transcript: Oh no, they're right behind me, go go go.
+  - name: npc_detail
+    label: none
+    description: A pedestrian drops a coffee cup, reacts, and picks it up while other pedestrians step around. The camera is zoomed in on the sidewalk.
+  - name: fishing_minigame
+    label: none
+    description: The character stands on a pier holding a fishing rod. A tension meter fills at the bottom of the screen and a fish icon appears.
+  - name: car_customisation
+    label: none
+    description: A garage menu showing paint, wheels and spoiler options for a parked coupe. The player scrolls through colours.
+  - name: weather_showcase
+    label: none
+    description: Rain begins over a city skyline at dusk. Puddles form on the road and neon signs reflect in them. The player stands still.
+  - name: side_mission_delivery
+    label: none
+    description: A mission prompt reads "Deliver the package to the marina". The player drives a van following a yellow route line on the minimap.
+  - name: credits_roll
+    label: ending
+    description: White names scroll upward over a slow aerial shot of the city at sunrise. Text reads "Directed by" followed by further credits.
+  - name: final_mission_banner
+    label: ending
+    description: A banner reads "Final Mission" and then "Mission Passed". A summary screen shows 100 percent story completion and the two main characters drive away into the sunset.
+    transcript: So that's it, that's how the whole story ends.
+  - name: epilogue_card
+    label: ending
+    description: A black title card reads "Epilogue - Six Months Later", then the main character is shown opening a bar. An achievement pops up reading "Story Complete".
+  - name: cutscene_argument
+    label: isolated_cutscene
+    description: A letterboxed cinematic with no HUD. Two characters argue in a motel room in a series of close-up shots with film-style camera cuts. Nothing is controlled by the player.
+    transcript: You said you were done with that life. I am. Then why is there a bag of cash under the bed?
+  - name: cutscene_meeting
+    label: isolated_cutscene
+    description: Cinematic bars at the top and bottom of the frame. A crime boss sits across a table from the main character and slides a photo over. Subtitles are shown, there is no minimap or HUD.
+  - name: cutscene_intro_drive
+    label: isolated_cutscene
+    description: A non-interactive scene of a character being released from prison, collected by a friend, and driven away while opening credits style text appears. No gameplay interface is visible.
+  - name: character_death
+    label: major_story_reveal
+    description: In a cinematic during a mission, a main character's long-time partner is shot and dies in their arms. A "Mission Failed" style banner does not appear; the story continues.
+    transcript: No, no, stay with me. Tell her I'm sorry.
+  - name: betrayal_twist
+    label: major_story_reveal
+    description: During gameplay a phone call reveals that the player's trusted handler has been an undercover informant all along. On-screen objective changes to "Confront him".
+    transcript: It was you the whole time. You set us up from the start.
+  - name: secret_identity
+    label: major_story_reveal
+    description: The player opens a locked safe in a mission and finds documents and a photo showing that the main antagonist is the protagonist's father.
+  - name: late_game_location_spoiler
+    label: major_story_reveal
+    description: Gameplay in a hidden bunker with a caption reading "Chapter 9". A recording plays explaining who ordered the robbery that started the story.
+    transcript: I gave the order. It was never about the money.

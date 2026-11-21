@@ -30,7 +30,7 @@ class Verdict:
         return self.label != SAFE
 
 
-def classify(*, description: str, transcript: str, llm: LLMProvider, costs: CostTracker) -> Verdict:
+def classify(*, description: str, transcript: str, llm: LLMProvider, costs: CostTracker | None) -> Verdict:
     result = llm.complete_json(
         task="spoiler",
         system=(
@@ -44,7 +44,8 @@ def classify(*, description: str, transcript: str, llm: LLMProvider, costs: Cost
         user=f"What the frames show: {description}\n\nTranscript: {transcript or '(no speech)'}",
         schema=SCHEMA,
     )
-    costs.add(llm.name, "spoiler", result.model, result.usd, result.detail)
+    if costs:
+        costs.add(llm.name, "spoiler", result.model, result.usd, result.detail)
     label = result.data["label"]
     if label != SAFE and label not in BLOCKED:
         raise ProviderError(f"spoiler classifier returned an unknown label: {label!r}")

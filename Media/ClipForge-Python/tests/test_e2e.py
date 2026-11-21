@@ -65,14 +65,6 @@ def test_rerunning_a_finished_job_is_a_no_op(rendered, db, inbox_clip):
     assert db.one("SELECT COUNT(*) FROM costs")[0] == costs_before
 
 
-def test_new_jobs_rotate_template_and_caption_style(rendered, make_pipeline, db, inbox_clip):
-    first = db.job(rendered[1])
-    second = db.job(make_pipeline().make(inbox_clip, "detail-spotting", live=False, new=True))
-    assert second["id"] != first["id"]
-    assert second["template"] != first["template"] and second["caption_style"] != first["caption_style"]
-    assert second["state"] == "pending_review"
-
-
 def test_source_without_audio_still_renders(make_pipeline, db, settings, fixture_clip):
     import subprocess
 

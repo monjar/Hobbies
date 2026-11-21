@@ -8,9 +8,14 @@ from ..errors import ProviderError, ValidationFailed
 from ..media import extract_frame
 from ..providers.base import LLMProvider, VisionProvider
 from ..types import Span, Word
+from .audio import mean_energy
 from .transcribe import excerpt
 
 FRAME_POSITIONS = (0.2, 0.5, 0.8)
+# (shot changes, speech, audio level)
+WEIGHTS_WITH_AUDIO = (0.4, 0.3, 0.3)
+WEIGHTS_NO_AUDIO = (0.5, 0.5, 0.0)
+GRID_STEP_S = 5  # extra window start points, for footage with few or no shot changes
 
 PICK_SCHEMA = {
     "type": "object",
@@ -26,6 +31,7 @@ class Candidate:
     score: float
     cut_rate: float  # shot changes per second
     word_rate: float  # spoken words per second
+    energy: float = 0.0  # mean audio level, 0..1
 
 
 def candidate_windows(
@@ -35,16 +41,21 @@ def candidate_windows(
     min_len: float,
     max_len: float,
     top_k: int = 3,
+    energy: list[float] | None = None,
 ) -> list[Candidate]:
-    """Windows of min_len..max_len seconds that start on a shot boundary, best first.
+    """Windows of min_len..max_len seconds starting on a shot boundary or a 5 s grid point, best first.
 
-    Score is action density: shot-change rate and speech rate, each normalised to the best
-    window. Overlapping windows are dropped so the candidates show different moments.
+    Score is action density: shot-change rate, audio level and speech rate, each normalised
+    to the best window. `energy` is the per-second audio level; without it the score uses
+    shot changes and speech only. Overlapping windows are dropped so the candidates show
+    different moments.
     """
     if duration < min_len:
         raise ValidationFailed([f"source is {duration:.1f}s long; at least {min_len:.1f}s is needed"])
     target = min((min_len + max_len) / 2, duration)
-    boundaries = [0.0] + [c for c in cuts if 0 < c < duration]
+    # Shot boundaries plus a regular grid, so long single-shot gameplay still gets several candidates.
+    grid = [float(t) for t in range(0, int(duration), GRID_STEP_S)]
+    boundaries = sorted({0.0, *[c for c in cuts if 0 < c < duration], *grid})
     ends = [c for c in cuts if 0 < c < duration] + [duration]
 
     spans = set()
@@ -63,11 +74,18 @@ def candidate_windows(
         length = end - start
         cut_rate = sum(1 for c in cuts if start < c < end) / length
         word_rate = sum(1 for w in words if start <= w.start < end) / length
-        raw.append((Span(start, end), cut_rate, word_rate))
+        raw.append((Span(start, end), cut_rate, word_rate, mean_energy(energy, start, end) if energy else 0.0))
     max_cut = max(r[1] for r in raw) or 1.0
     max_word = max(r[2] for r in raw) or 1.0
+    max_energy = max(r[3] for r in raw) or 1.0
+    w_cut, w_word, w_energy = WEIGHTS_WITH_AUDIO if energy else WEIGHTS_NO_AUDIO
     scored = [
-        Candidate(span, round(0.5 * cut / max_cut + 0.5 * word / max_word, 6), cut, word) for span, cut, word in raw
+        Candidate(
+            span,
+            round(w_cut * cut / max_cut + w_word * word / max_word + w_energy * level / max_energy, 6),
+            cut, word, round(level, 6),
+        )
+        for span, cut, word, level in raw
     ]
     scored.sort(key=lambda c: (-c.score, c.span.start))
 

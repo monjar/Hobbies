@@ -18,9 +18,14 @@ def test_windows_respect_length_bounds_and_source():
         assert 0 <= candidate.span.start and candidate.span.end <= 120.0
 
 
-def test_windows_start_on_shot_boundaries():
-    for candidate in candidate_windows(120.0, CUTS, [], min_len=23, max_len=40):
-        assert candidate.span.start in [0.0, *CUTS]
+def test_windows_start_on_shot_boundaries_or_the_grid():
+    for candidate in candidate_windows(120.0, CUTS, [], min_len=23, max_len=40, top_k=10):
+        assert candidate.span.start in CUTS or candidate.span.start % 5 == 0
+
+
+def test_single_shot_footage_gets_candidates_across_its_length():
+    starts = [c.span.start for c in candidate_windows(300.0, [], [], min_len=23, max_len=40, top_k=5)]
+    assert len(set(starts)) == 5 and max(starts) >= 80  # not just the first seconds of the file
 
 
 def test_densest_action_ranks_first():
@@ -33,7 +38,7 @@ def test_speech_raises_a_windows_score():
     words = [Word("w", 80 + i * 0.3, 80.2 + i * 0.3) for i in range(80)]
     silent = candidate_windows(120.0, [75.0], [], min_len=23, max_len=40)
     spoken = candidate_windows(120.0, [75.0], words, min_len=23, max_len=40)
-    assert spoken[0].span.start == 75.0
+    assert 70.0 <= spoken[0].span.start <= 80.0  # the window that holds the speech (80-104 s)
     assert spoken[0].word_rate > 0 and silent[0].word_rate == 0
 
 
@@ -50,8 +55,8 @@ def test_selection_is_deterministic():
 
 
 def test_source_without_cuts_still_yields_a_window():
-    (only,) = candidate_windows(60.0, [], [], min_len=23, max_len=40)
-    assert only.span.start == 0.0 and 23 <= only.span.length <= 40
+    first = candidate_windows(60.0, [], [], min_len=23, max_len=40)[0]
+    assert first.span.start == 0.0 and 23 <= first.span.length <= 40
 
 
 def test_source_shorter_than_minimum_fails():

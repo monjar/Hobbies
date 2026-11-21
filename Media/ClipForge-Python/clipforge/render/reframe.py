@@ -5,7 +5,7 @@ from pathlib import Path
 from ..config import OutputCfg
 from ..media import ffmpeg
 from ..types import Span
-from .templates import TEMPLATES
+from .templates import SUBJECT_AWARE, TEMPLATES
 
 _AUDIO_FORMAT = "aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo"
 
@@ -22,13 +22,27 @@ def render_video(
     game_gain_db: float,
     dest: Path,
     work_dir: Path,
+    crop_centres: list[float] | None = None,
 ) -> None:
-    """Encode the final MP4. `captions_name` is an .ass file inside work_dir (ffmpeg runs there)."""
+    """Encode the final MP4. `captions_name` is an .ass file inside work_dir (ffmpeg runs there).
+
+    `crop_centres` gives, per segment, the horizontal centre (0..1) of an output-shaped crop;
+    it is required by subject-aware templates and ignored by the others.
+    """
+    if template in SUBJECT_AWARE and (crop_centres is None or len(crop_centres) != len(segments)):
+        raise ValueError(f"template {template} needs one crop centre per segment")
     render_s = sum(segment.length for segment in segments)
     inputs, chains = [], []
     for index, segment in enumerate(segments):
         inputs += ["-ss", f"{segment.start:.3f}", "-t", f"{segment.length:.3f}", "-i", source.resolve()]
-        chains.append(f"[{index}:v]setpts=PTS-STARTPTS,fps={out.fps},setsar=1[v{index}]")
+        crop = ""
+        if template in SUBJECT_AWARE:
+            centre = crop_centres[index]
+            crop = (
+                f",crop='min(iw,ih*{out.width}/{out.height})':ih:'min(max(iw*{centre}-ow/2,0),iw-ow)':0"
+                f",scale={out.width}:{out.height}:force_original_aspect_ratio=increase,crop={out.width}:{out.height}"
+            )
+        chains.append(f"[{index}:v]setpts=PTS-STARTPTS,fps={out.fps},setsar=1{crop}[v{index}]")
         if source_has_audio:
             chains.append(f"[{index}:a]asetpts=PTS-STARTPTS,{_AUDIO_FORMAT}[a{index}]")
     count = len(segments)

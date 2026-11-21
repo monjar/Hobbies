@@ -5,7 +5,7 @@ angles:
   what-you-missed: Walk through the moment as a "what you missed" recap, in order of appearance.
 
 # Visual templates and caption styles are rotated per job so output is not uniform.
-templates: [blur_fill, center_crop, stack_zoom]
+templates: [blur_fill, center_crop, stack_zoom, subject_crop]
 caption_styles:
   - name: karaoke
     mode: karaoke
