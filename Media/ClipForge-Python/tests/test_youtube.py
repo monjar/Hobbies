@@ -133,10 +133,13 @@ def test_discover_logs_quota_per_run_and_stores_topics(db, settings):
     api = FakeApi()
     result = discover(db, settings, lambda on_call: client(api, on_call))
     keywords = len(settings.sources.discovery.keywords)
-    assert result["quota"] == {"search": keywords, "general": keywords}
+    assert result["quota"] == {"search": 2 * keywords, "general": keywords}  # trending + CC search per keyword
     assert result["topics"] == 2 * keywords and len(ranked_topics(db)) == 2
+    assert [t["video_id"] for t in ranked_topics(db, creative_commons_only=True)] == [CC.id]
     rows = db.all("SELECT method, bucket, units FROM quota_log WHERE run_id = ?", result["run_id"])
-    assert len(rows) == 2 * keywords and {r["method"] for r in rows} == {"search.list", "videos.list"}
+    assert len(rows) == 3 * keywords and {r["method"] for r in rows} == {"search.list", "videos.list"}
+    licences = [dict(r.url.params).get("videoLicense") for r in api.requests if r.url.path.endswith("/search")]
+    assert licences == ["any", "creativeCommon"] * keywords
     assert not settings.library.exists()  # discovery never downloads
 
 

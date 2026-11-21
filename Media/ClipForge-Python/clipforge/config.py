@@ -20,6 +20,7 @@ class DiscoveryCfg(_Cfg):
     keywords: list[str] = []
     max_results: int = Field(default=25, ge=1, le=50)
     lookback_days: int = Field(default=7, ge=1)
+    creative_commons_search: bool = True  # second search per keyword, limited to CC uploads
 
 
 class SourcesCfg(_Cfg):

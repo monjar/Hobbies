@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from ..config import Settings
 from ..db import DB
 from ..log import log
-from .youtube import VideoMeta, YouTubeClient
+from .youtube import LICENCE_CC, VideoMeta, YouTubeClient
 
 # Title wording -> narration angle. Only angles present in config/style.yaml are suggested.
 ANGLE_HINTS = [
@@ -58,8 +58,13 @@ def discover(db: DB, settings: Settings, make_client) -> dict:
     client: YouTubeClient = make_client(on_call)
     now = datetime.now(UTC)
     stored = 0
+    since = now - timedelta(days=cfg.lookback_days)
     for keyword in cfg.keywords:
-        ids = client.search(keyword, published_after=now - timedelta(days=cfg.lookback_days), max_results=cfg.max_results)
+        ids = client.search(keyword, published_after=since, max_results=cfg.max_results)
+        if cfg.creative_commons_search:
+            # Trending results are almost all standard licence, so downloadable footage needs its own search.
+            extra = client.search(keyword, published_after=since, licence=LICENCE_CC, max_results=cfg.max_results)
+            ids += [video_id for video_id in extra if video_id not in ids]
         videos = client.videos(ids) if ids else []
         store_topics(db, videos, keyword, now)
         stored += len(videos)
@@ -71,9 +76,10 @@ def discover(db: DB, settings: Settings, make_client) -> dict:
     return {"run_id": run_id, "topics": stored, "quota": usage}
 
 
-def ranked_topics(db: DB, limit: int = 20) -> list[dict]:
+def ranked_topics(db: DB, limit: int = 20, creative_commons_only: bool = False) -> list[dict]:
     """Fastest-growing videos first. Deterministic for a given database."""
-    rows = db.all("SELECT * FROM topics ORDER BY views_per_hour DESC, video_id ASC LIMIT ?", limit)
+    where = "WHERE licence = 'creativeCommon'" if creative_commons_only else ""
+    rows = db.all(f"SELECT * FROM topics {where} ORDER BY views_per_hour DESC, video_id ASC LIMIT ?", limit)
     return [dict(row) for row in rows]
 
 

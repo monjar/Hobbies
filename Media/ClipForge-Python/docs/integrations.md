@@ -58,10 +58,10 @@ Checked: 2026-11-20. Code: `clipforge/discover/youtube.py`.
 
 Notes:
 
-- The search quota changed from the long-standing "100 units per call out of 10,000". It is now a separate 100-calls-a-day bucket. Each configured keyword uses one search call per `clipforge discover` run.
+- The search quota changed from the long-standing "100 units per call out of 10,000". It is now a separate 100-calls-a-day bucket. Each configured keyword uses two search calls per `clipforge discover` run (trending, then Creative Commons only).
 - The limit of 50 IDs per `videos.list` call is not stated on the reference page; the client batches at 50, the usual value. Not confirmed against a live call.
 - The key travels in the URL, so request URLs are never logged or put in error messages.
-- Live status: requests from this repo reach the API and its error responses are handled (checked with an invalid key on 2026-11-20). No call with a valid key has been made yet.
+- Live status: `search.list` and `videos.list` work with a real key (2026-11-21). The `videoLicense=creativeCommon` filter and `status.license` agreed on all 50 results checked. No batch above 50 IDs has been sent.
 
 ## yt-dlp — downloads for policy-approved URLs
 
@@ -71,7 +71,7 @@ Checked: 2026-11-20, version 2026.10.26. Code: `clipforge/ingest/url.py`.
 - YouTube extraction needs a JavaScript runtime on `PATH`. yt-dlp enables only deno by default; this project also enables node.
 - yt-dlp is not an official YouTube API, and the Data API has no download endpoint. Downloads are limited by `ingest/policy.py` to allowlisted channels and uploads the API reports as Creative Commons. Whether that use fits YouTube's Terms of Service for your case is your call to make.
 - From a cloud or datacentre IP, YouTube answers with "Sign in to confirm you're not a bot" (seen 2026-11-20). Run `clipforge ingest` from a home connection. This project does not pass account cookies to get around that check.
-- Live status: no download has completed from this repo yet.
+- Live status: the policy lookup works against the real API. No download has completed: every attempt from the cloud build machine hit the bot check (2026-11-21).
 
 ## Local libraries (no network API)
 

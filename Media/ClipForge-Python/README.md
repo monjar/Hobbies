@@ -56,13 +56,14 @@ What happens in order: source policy check → transcribe (faster-whisper) → s
 ```bash
 uv run clipforge discover     # search YouTube for the keywords in config/sources.yaml; stores metadata only
 uv run clipforge topics       # print stored topics, fastest-growing first, with a suggested angle
+uv run clipforge topics --cc  # only Creative Commons uploads, the ones ingest may download
 uv run clipforge ingest "https://www.youtube.com/watch?v=VIDEO_ID"
 uv run clipforge make library/VIDEO_ID.mp4 --angle detail-spotting
 ```
 
 `discover` never downloads. `ingest` asks the YouTube Data API about the video first and downloads only if its channel is in `allowlist_channels` or the API reports a Creative Commons licence. The download goes to `library/`, and the source row records the URL, channel, licence, the rule that allowed it and the time. Videos made from it carry a credit line in the sidecar and the description. The five highest-ranked topic titles are given to the script prompt as background.
 
-To get a key: create a project in the Google Cloud console, enable "YouTube Data API v3", and create an API key. Each keyword uses one of the 100 daily search calls per `discover` run.
+To get a key: create a project in the Google Cloud console, enable "YouTube Data API v3", and create an API key. Each keyword uses two of the 100 daily search calls per `discover` run: one for trending results and one limited to Creative Commons uploads.
 
 Run `ingest` from a home connection. From cloud servers YouTube refuses with a "confirm you're not a bot" check.
 
@@ -71,7 +72,7 @@ Run `ingest` from a home connection. From cloud servers YouTube refuses with a "
 | Command | What it does |
 | --- | --- |
 | `clipforge discover` | Search YouTube for the configured keywords, store topics, print quota used. |
-| `clipforge topics [--limit N]` | Print ranked topics from stored data. No network. |
+| `clipforge topics [--limit N] [--cc]` | Print ranked topics from stored data. `--cc` keeps only downloadable Creative Commons uploads. No network. |
 | `clipforge ingest URL` | Download one YouTube video into `library/` if the source policy allows it. |
 | `clipforge make PATH --angle ANGLE [--live] [--template T] [--caption-style S] [--new]` | Make one video from a file in `inbox/` or one downloaded by `ingest`. Re-running resumes or reuses the existing job for that file and angle; `--new` starts another. |
 | `clipforge jobs [--limit N]` | List recent jobs with state and failure reason. |

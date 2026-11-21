@@ -83,20 +83,23 @@ def discover():
 
 
 @app.command()
-def topics(limit: Annotated[int, typer.Option(help="How many topics to print.")] = 20):
+def topics(
+    limit: Annotated[int, typer.Option(help="How many topics to print.")] = 20,
+    cc: Annotated[bool, typer.Option("--cc", help="Only Creative Commons uploads, which `ingest` may download.")] = False,
+):
     """Print stored topics, fastest-growing first, with a suggested narration angle. No network."""
     from .discover.rank import ranked_topics, suggest_angle
 
     try:
         settings = load_settings()
-        rows = ranked_topics(DB(settings.db_path), limit)
+        rows = ranked_topics(DB(settings.db_path), limit, creative_commons_only=cc)
         if not rows:
             typer.echo("no topics stored; run `clipforge discover` first")
         for rank, topic in enumerate(rows, 1):
             licence = "CC" if topic["licence"] == "creativeCommon" else "std"
             angle = suggest_angle(topic["title"], list(settings.style.angles))
             typer.echo(
-                f"{rank:>2}. {topic['views_per_hour']:>9.0f} views/h  [{licence}]  {angle:<19} "
+                f"{rank:>2}. {topic['views_per_hour']:>9.0f} views/h  [{licence}] {topic['duration_s'] // 60:>3}m  {angle:<19} "
                 f"{topic['title']}  https://www.youtube.com/watch?v={topic['video_id']}"
             )
     except ClipforgeError as exc:

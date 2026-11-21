@@ -6,5 +6,6 @@ allow_creative_commons: true # also allow uploads the YouTube API reports as Cre
 
 discovery:
   keywords: ["GTA 6 gameplay", "GTA 6 details", "GTA 6 trailer breakdown"]
-  max_results: 25            # per keyword; each keyword costs one of the 100 daily search calls
+  max_results: 25            # per keyword; each keyword costs one of the 100 daily search calls (two with the CC search)
   lookback_days: 7
+  creative_commons_search: true  # one more search call per keyword, limited to CC uploads
