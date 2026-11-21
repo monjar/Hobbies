@@ -77,7 +77,7 @@ Checked: 2026-11-20, version 2026.10.26. Code: `clipforge/ingest/url.py`.
 
 | Library | Version checked | Use |
 | --- | --- | --- |
-| faster-whisper | 1.2.1 | `WhisperModel.transcribe(path, word_timestamps=True)`. Downloads the model from Hugging Face on first use. |
+| faster-whisper | 1.2.1 | `WhisperModel.transcribe(samples, word_timestamps=True)` on audio decoded by ffmpeg (16 kHz mono float). Its own file decoding fails with PyAV 19 (`metadata_errors` argument removed). Downloads the model on first use from `huggingface.co`, `cas-server.xethub.hf.co` and `us.aws.cdn.hf.co`. Ran for real on 2026-11-21 with the `small` model. |
 | PySceneDetect | 0.7.3 | `detect(path, ContentDetector())`; timecodes read through `.seconds`. |
 | ffmpeg | 6.1.1 | Filters used: `concat`, `ass`, `loudnorm`, `sidechaincompress`, `amix` with `normalize=0`, `alimiter`. |
 

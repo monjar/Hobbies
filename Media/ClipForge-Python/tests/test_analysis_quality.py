@@ -232,3 +232,22 @@ def test_spoiler_evaluation_reports_accuracy_leaks_and_cost():
         cases, KeyedLLM({c["description"]: ("ending" if c["label"] != "none" else "none") for c in cases})
     )
     assert not any(r.leaked for r in swapped) and not all(r.correct for r in swapped)
+
+
+# -- audio decoding for transcription -----------------------------------------
+
+def test_audio_is_decoded_to_mono_16k_floats_for_whisper(loud_late_clip, tmp_path):
+    import numpy as np
+
+    from clipforge.analyse.transcribe import WHISPER_SAMPLE_RATE, FasterWhisperTranscriber, decode_for_whisper
+    from clipforge.config import TranscribeCfg
+
+    audio = decode_for_whisper(loud_late_clip)
+    assert audio.dtype == np.float32 and audio.ndim == 1
+    assert abs(len(audio) - 60 * WHISPER_SAMPLE_RATE) < WHISPER_SAMPLE_RATE // 2
+    assert np.abs(audio[40 * WHISPER_SAMPLE_RATE :]).max() > 10 * np.abs(audio[: 20 * WHISPER_SAMPLE_RATE]).max()
+
+    silent = lavfi(tmp_path / "silent.mp4", "-f", "lavfi", "-t", "3", "-i", "color=c=gray:size=160x90:rate=10")
+    assert decode_for_whisper(silent).size == 0
+    # A file without audio is answered without loading (or downloading) the model.
+    assert FasterWhisperTranscriber(TranscribeCfg(model="no-such-model")).transcribe(silent) == []

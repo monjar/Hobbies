@@ -6,7 +6,7 @@ A local pipeline that turns gaming footage into narrated vertical short videos (
 
 | Milestone | State |
 | --- | --- |
-| M0 — one video from a local file | Built. Tested end to end with mocked providers and real ffmpeg. Not yet run with live script and voice providers. |
+| M0 — one video from a local file | Built. Tested end to end with real ffmpeg, scene detection and Whisper. Not yet run with live script and voice providers. |
 | M1 — review queue | Built and tested. |
 | M2 — analysis quality | Built and tested on synthetic clips. The acceptance check (7 of 10 hand-labelled real clips) has not been run: it needs the clips. |
 | M3 — discovery | YouTube works live. Reddit is not built: Reddit closed new API access (see docs/integrations.md). |
