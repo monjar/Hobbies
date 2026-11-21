@@ -1,0 +1,24 @@
+# Provider + model per role. Prices feed the per-video cost cap; see docs/integrations.md for sources.
+llm:
+  provider: anthropic
+  model: claude-opus-5-5
+  effort: medium
+  price_in_per_mtok: 4.0
+  price_out_per_mtok: 20.0
+vision:
+  provider: anthropic
+  model: claude-opus-5-5
+  effort: medium
+  price_in_per_mtok: 4.0
+  price_out_per_mtok: 20.0
+tts:
+  provider: elevenlabs
+  model: eleven_multilingual_v2
+  voice_id: JBFqnCBsd6RMkjVDRZzb   # example voice from the ElevenLabs API reference; replace with your own
+  output_format: mp3_44100_128
+  price_per_1k_chars: 0.08
+transcribe:
+  provider: faster-whisper   # or "none" for footage without commentary
+  model: small
+  device: cpu
+  compute_type: int8

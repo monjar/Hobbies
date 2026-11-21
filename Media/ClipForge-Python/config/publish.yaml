@@ -1,0 +1,14 @@
+# One block per platform. mode: api uploads through the platform API; mode: export writes the
+# video and caption to out/export/<date>/<platform>/ for manual upload. See docs/integrations.md.
+youtube:
+  mode: api
+  privacy: public                 # public, unlisted or private
+  category_id: "20"               # Gaming
+  contains_synthetic_media: false # YouTube's "realistic altered or synthetic content" disclosure
+tiktok:
+  mode: export                    # TikTok's API terms rule out personal upload tools; see docs
+  ai_disclosure: true             # reminder in the caption file to switch on the AI-generated label
+instagram:
+  mode: export                    # switch to api once INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_USER_ID are set
+  ai_disclosure: true             # sent as is_ai_generated in api mode
+  api_version: v27.0

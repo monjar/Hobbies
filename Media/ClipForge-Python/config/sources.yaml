@@ -1,0 +1,11 @@
+# Source policy (PLAN.md constraint 1). Enforced in clipforge/ingest/policy.py; deny is the default.
+inbox: inbox                 # local footage folder, relative to the project root
+library: library             # where policy-approved URL downloads are stored
+allowlist_channels: []       # YouTube channel IDs (UC...) whose footage may be downloaded
+allow_creative_commons: true # also allow uploads the YouTube API reports as Creative Commons
+
+discovery:
+  keywords: ["GTA 6 gameplay", "GTA 6 details", "GTA 6 trailer breakdown"]
+  max_results: 25            # per keyword; each keyword costs one of the 100 daily search calls (two with the CC search)
+  lookback_days: 7
+  creative_commons_search: true  # one more search call per keyword, limited to CC uploads

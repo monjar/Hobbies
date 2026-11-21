@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Review queue</h1>
+<h2>Waiting for review ({{ pending|length }})</h2>
+{% for job in pending %}
+<a class="card" href="/job/{{ job.id }}">
+  <div class="row"><strong>{{ name(job) }}</strong><span class="tag">{{ "live" if job.live else "mock" }}</span></div>
+  <div class="muted">{{ job.angle }} · {{ job.template }} · {{ job.caption_style }}</div>
+</a>
+{% else %}
+<div class="card muted">Nothing is waiting.</div>
+{% endfor %}
+<h2 style="margin-top:24px">Other jobs</h2>
+{% for job in others %}
+<a class="card" href="/job/{{ job.id }}">
+  <div class="row"><span>{{ name(job) }}</span>
+    <span class="tag {{ 'bad' if job.state in ('failed', 'rejected') else 'ok' if job.state in ('approved', 'published') else '' }}">{{ job.state }}</span></div>
+  <div class="muted">{{ job.angle }}{% if job.fail_reason %} · {{ job.fail_reason }}{% endif %}</div>
+</a>
+{% else %}
+<div class="card muted">No other jobs yet.</div>
+{% endfor %}
+{% endblock %}

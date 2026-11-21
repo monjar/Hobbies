@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+work/
+out/
+state/
+inbox/*
+!inbox/.gitkeep
+library/
